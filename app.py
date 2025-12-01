@@ -52,126 +52,121 @@ def convert_file_cached(file_path, suffix):
 # --- Inicializar IA ---
 ai_ready = ai_chat.initialize_ai()
 
-# --- Estilos CSS Personalizados (Mobile-First Dark Glassmorphism) ---
+# --- Estilos CSS Personalizados (Microsoft Copilot Theme) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
 
-    /* 1. Global Reset & Font */
+    /* 1. Global Reset & Font (Segoe UI - Microsoft Standard) */
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Segoe UI', 'Inter', sans-serif;
     }
 
-    /* 2. App Background (Deep Dark) */
+    /* 2. App Background (Copilot Dark Charcoal) */
     .stApp {
-        background-color: #121212;
-        color: #e0e0e0;
-    }
-
-    /* 3. Headers */
-    h1, h2, h3, .stHeader {
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.5px;
-    }
-
-    /* 4. Sidebar (Clean Navigation) */
-    section[data-testid="stSidebar"] {
         background-color: #181818;
-        border-right: 1px solid #2d2d2d;
+        color: #FFFFFF;
     }
 
-    /* 5. Custom Card Class (Glassmorphism Panel) */
+    /* 3. Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #202020;
+        border-right: 1px solid #333;
+    }
+
+    /* 4. SIDEBAR TRIGGER FIX (El Botón Permanente) */
+    [data-testid="stSidebarCollapsedControl"] {
+        background-color: #2b2b2b !important;
+        border-radius: 50% !important;
+        border: 1px solid #555 !important;
+        color: #FFFFFF !important;
+        padding: 0.3rem !important;
+        margin-top: 0.5rem !important;
+        margin-left: 0.5rem !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        z-index: 999999 !important; /* Siempre visible */
+        transition: all 0.2s ease;
+    }
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        background-color: #687ace !important; /* Copilot Blue Hover */
+        border-color: #687ace !important;
+        transform: scale(1.1);
+    }
+
+    /* 5. Headers */
+    h1, h2, h3, .stHeader {
+        color: #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+
+    /* 6. Custom Card (Copilot Panel) */
     .stCard {
-        background-color: #1e1e1e;
+        background-color: #2b2b2b;
         border-radius: 16px;
+        border: 1px solid #3e3e3e;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         padding: 1.5rem;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         margin-bottom: 1.5rem;
-        border: 1px solid #333;
     }
 
-    /* 6. Buttons (Neon Blue Accent & Touch Friendly) */
+    /* 7. Buttons (Copilot Accent Blue) */
     .stButton > button {
-        background-color: rgba(0, 123, 255, 0.1);
-        color: #007bff;
-        border: 1px solid #007bff;
-        border-radius: 12px;
+        background-color: #687ace; /* Slate Blue */
+        color: white;
+        border: none;
+        border-radius: 24px; /* Píldora completa */
         font-weight: 600;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        padding: 0.75rem 1rem; /* Más padding para dedos */
-        min-height: 48px; /* Altura mínima táctil */
+        padding: 0.6rem 1.2rem;
+        transition: all 0.3s ease;
+        min-height: 45px;
     }
     .stButton > button:hover {
-        background-color: #007bff;
-        color: white;
-        box-shadow: 0 0 20px rgba(0, 123, 255, 0.4);
-        transform: translateY(-2px);
-        border-color: #007bff;
+        background-color: #5665b0;
+        box-shadow: 0 4px 15px rgba(104, 122, 206, 0.4);
+        transform: translateY(-1px);
     }
 
-    /* 7. Inputs (Floating Pill Style) */
+    /* 8. Inputs (Floating Pill) */
     .stTextInput > div > div > input {
-        border-radius: 50px;
-        background-color: #252525;
-        border: 1px solid #444;
+        background-color: #333333;
+        border-radius: 24px;
+        border: 1px solid #555;
         color: white;
-        padding: 12px 25px;
-        transition: border-color 0.3s;
+        padding: 10px 20px;
     }
     .stTextInput > div > div > input:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+        border-color: #687ace;
+        box-shadow: 0 0 0 2px rgba(104, 122, 206, 0.3);
     }
 
-    /* 8. Hide Native Elements for Pro Look */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* 9. Selectbox & Tabs */
-    .stSelectbox > div > div {
-        background-color: #252525;
-        border-radius: 12px;
-        border: 1px solid #444;
-        color: white;
-    }
+    /* 9. Tabs (Minimalist) */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: transparent;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 45px;
-        white-space: pre-wrap;
-        background-color: #1e1e1e;
-        border-radius: 20px; /* Tabs redondeados tipo botón */
-        border: 1px solid #333;
+        height: 40px;
+        background-color: transparent;
+        border-radius: 20px;
+        border: 1px solid transparent;
+        color: #aaa;
         padding: 0 20px;
-        margin-right: 5px;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #007bff;
-        color: white;
-        border-color: #007bff;
+        background-color: #333;
+        color: #687ace;
+        border: 1px solid #444;
     }
 
-    /* --- MOBILE RESPONSIVE TWEAKS --- */
+    /* 10. Hide Native Junk */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Mobile Tweaks */
     @media only screen and (max-width: 768px) {
-        /* Reducir padding del contenedor principal */
         .block-container {
-            padding-top: 2rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
-        }
-        /* Títulos más pequeños */
-        h1 { font-size: 1.8rem !important; }
-        h2 { font-size: 1.5rem !important; }
-        h3 { font-size: 1.2rem !important; }
-        
-        /* Tarjetas más compactas */
-        .stCard {
-            padding: 1rem;
-            border-radius: 12px;
+            padding-top: 3rem !important; /* Espacio para el botón flotante */
         }
     }
     </style>
