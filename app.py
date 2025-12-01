@@ -22,7 +22,7 @@ st.set_page_config(
     page_title="Circuit Verifier",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto" # Auto-colapsar en móvil
 )
 
 # --- FASE 1: Gestión de Estado (Reset) ---
@@ -41,10 +41,7 @@ def load_cached_pdf(file_path):
 
 @st.cache_data
 def get_cached_chapter_index(_doc, doc_name):
-    """
-    Genera el índice de capítulos y lo guarda en caché.
-    IMPORTANTE: 'doc_name' se usa como llave de caché para diferenciar documentos.
-    """
+    """Genera el índice de capítulos y lo guarda en caché."""
     return backend.generate_chapter_index(_doc)
 
 @st.cache_data
@@ -55,7 +52,7 @@ def convert_file_cached(file_path, suffix):
 # --- Inicializar IA ---
 ai_ready = ai_chat.initialize_ai()
 
-# --- Estilos CSS Personalizados (Dark Glassmorphism Theme) ---
+# --- Estilos CSS Personalizados (Mobile-First Dark Glassmorphism) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
@@ -88,13 +85,13 @@ st.markdown("""
     .stCard {
         background-color: #1e1e1e;
         border-radius: 16px;
-        padding: 2rem;
+        padding: 1.5rem;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         margin-bottom: 1.5rem;
         border: 1px solid #333;
     }
 
-    /* 6. Buttons (Neon Blue Accent) */
+    /* 6. Buttons (Neon Blue Accent & Touch Friendly) */
     .stButton > button {
         background-color: rgba(0, 123, 255, 0.1);
         color: #007bff;
@@ -102,7 +99,8 @@ st.markdown("""
         border-radius: 12px;
         font-weight: 600;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1rem; /* Más padding para dedos */
+        min-height: 48px; /* Altura mínima táctil */
     }
     .stButton > button:hover {
         background-color: #007bff;
@@ -139,20 +137,42 @@ st.markdown("""
         color: white;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
+        gap: 8px;
+        background-color: transparent;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
+        height: 45px;
         white-space: pre-wrap;
         background-color: #1e1e1e;
-        border-radius: 10px 10px 0 0;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        border-radius: 20px; /* Tabs redondeados tipo botón */
+        border: 1px solid #333;
+        padding: 0 20px;
+        margin-right: 5px;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #252525;
-        color: #007bff;
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    /* --- MOBILE RESPONSIVE TWEAKS --- */
+    @media only screen and (max-width: 768px) {
+        /* Reducir padding del contenedor principal */
+        .block-container {
+            padding-top: 2rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        /* Títulos más pequeños */
+        h1 { font-size: 1.8rem !important; }
+        h2 { font-size: 1.5rem !important; }
+        h3 { font-size: 1.2rem !important; }
+        
+        /* Tarjetas más compactas */
+        .stCard {
+            padding: 1rem;
+            border-radius: 12px;
+        }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -175,10 +195,7 @@ if 'search_results' not in st.session_state:
 def get_chapter_range(chapter_name, index, total_pages):
     if not index or chapter_name not in index:
         return None
-    
     start_page = index[chapter_name]
-    
-    # Encontrar la siguiente página de inicio para saber dónde termina este capítulo
     sorted_starts = sorted(index.values())
     try:
         current_idx = sorted_starts.index(start_page)
@@ -188,334 +205,203 @@ def get_chapter_range(chapter_name, index, total_pages):
             end_page = total_pages
     except ValueError:
         end_page = total_pages
-        
     return (start_page, end_page)
 
-# --- SIDEBAR: Panel de Control ---
+# --- SIDEBAR: Configuración Global (Solo carga) ---
 with st.sidebar:
-    st.title("📚 Circuitos\nVerificador")
-    st.markdown("---")
+    st.title("📚 Configuración")
     
-    tab_load, tab_search_img = st.tabs(["📂 Libro", "🕵️ Buscar IMG"])
-    
-    with tab_load:
-        # Widget de carga con Callback de limpieza y Key Dinámica
-        uploaded_file = st.file_uploader(
-            "Cargar Archivo Base", 
-            type=["pdf", "png", "jpg", "jpeg", "docx", "xlsx"],
-            on_change=reset_state,
-            key=f"uploader_{st.session_state.uploader_key}"
-        )
+    # Widget de carga
+    uploaded_file = st.file_uploader(
+        "Cargar Libro Base", 
+        type=["pdf", "png", "jpg", "jpeg", "docx", "xlsx"],
+        on_change=reset_state,
+        key=f"uploader_{st.session_state.uploader_key}"
+    )
 
-        if uploaded_file:
-            # Usamos el nombre del archivo como clave para detectar cambios reales
-            if st.session_state.doc is None or uploaded_file.name != st.session_state.filename:
-                with st.spinner("Procesando archivo..."):
-                    # 1. Guardar archivo original temporalmente
-                    suffix = "." + uploaded_file.name.split('.')[-1]
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
-                        tmp_file.write(uploaded_file.getvalue())
-                        tmp_path = tmp_file.name
-                    
-                    # 2. Convertir a PDF (Usando Caché)
-                    final_pdf_path = tmp_path
-                    if suffix.lower() not in ['.pdf']:
-                        with st.spinner(f"Convirtiendo {suffix} a PDF estandarizado..."):
-                            final_pdf_path = convert_file_cached(tmp_path, suffix)
-                    
-                    if final_pdf_path:
-                        # 3. Cargar Backend (Usando Caché)
-                        doc = load_cached_pdf(final_pdf_path)
-                        if doc:
-                            st.session_state.doc = doc
-                            st.session_state.filename = uploaded_file.name
-                            # 4. Generar Índice (Usando Caché)
-                            st.session_state.chapter_index = get_cached_chapter_index(doc, uploaded_file.name)
-                            st.success(f"✅ Listo: {doc.page_count} páginas")
-                        else:
-                            st.error("Error al leer el documento procesado.")
-                    else:
-                        st.error("Formato no soportado o error de conversión.")
-
-    with tab_search_img:
-        st.markdown("### 📸 Búsqueda Inversa (Blindada)")
-        st.info("Sube una foto del ejercicio para localizarlo en el libro.")
-        
-        if st.session_state.doc is None:
-            st.warning("Primero carga un libro en la pestaña anterior.")
-        else:
-            search_img = st.file_uploader("Subir Recorte", type=["png", "jpg", "jpeg"], key="search_img_uploader")
-            
-            if search_img:
-                # 1. Análisis de Calidad (Blur Detection)
-                img_bytes = search_img.getvalue()
-                is_blurry, blur_score = image_shield.detect_blur(img_bytes)
+    if uploaded_file:
+        if st.session_state.doc is None or uploaded_file.name != st.session_state.filename:
+            with st.spinner("Procesando archivo..."):
+                suffix = "." + uploaded_file.name.split('.')[-1]
+                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                    tmp_file.write(uploaded_file.getvalue())
+                    tmp_path = tmp_file.name
                 
-                col_qual, col_proc = st.columns(2)
-                with col_qual:
-                    st.caption(f"Nitidez: {int(blur_score)}")
-                    if is_blurry:
-                        st.warning("⚠️ Imagen borrosa. Resultados inciertos.")
-                    else:
-                        st.success("✅ Imagen nítida.")
+                final_pdf_path = tmp_path
+                if suffix.lower() not in ['.pdf']:
+                    with st.spinner(f"Convirtiendo {suffix}..."):
+                        final_pdf_path = convert_file_cached(tmp_path, suffix)
                 
-                if st.button("🔍 Escanear y Buscar"):
-                    with st.spinner("Aplicando filtros de visión artificial..."):
-                        # 2. Limpieza de Imagen (CLAHE)
-                        clean_bytes = image_shield.clean_image(img_bytes)
-                        
-                        # Mostrar imagen procesada (Debug visual para el usuario)
-                        with col_proc:
-                            st.image(clean_bytes, caption="Visión de la IA", width=150)
-
-                    with st.spinner("Extrayendo firma digital del circuito..."):
-                        # 3. Extraer firma con IA (usando imagen limpia)
-                        raw_signature = ai_chat.extract_problem_signature(clean_bytes)
-                        
-                        # 4. Sanitización de Datos
-                        signature = image_shield.sanitize_ocr(raw_signature)
-                        
-                    if signature:
-                        st.success(f"Firma detectada: {signature}")
-                        
-                        with st.spinner(f"Buscando {len(signature)} huellas en el libro..."):
-                            # 5. Buscar en el libro
-                            results = search_engine.search_by_unique_values(
-                                st.session_state.doc, 
-                                signature
-                            )
-                            st.session_state.search_results = results
-                            
-                            if results:
-                                best_page = results[0][0]
-                                score = results[0][1]
-                                st.session_state.current_page = best_page
-                                st.balloons()
-                                st.success(f"¡Encontrado! Pág {best_page+1} (Coincidencia: {int(score)}%)")
-                                st.rerun()
-                            else:
-                                st.error("No se encontró ninguna página con esos valores.")
+                if final_pdf_path:
+                    doc = load_cached_pdf(final_pdf_path)
+                    if doc:
+                        st.session_state.doc = doc
+                        st.session_state.filename = uploaded_file.name
+                        st.session_state.chapter_index = get_cached_chapter_index(doc, uploaded_file.name)
+                        st.success(f"✅ Libro Cargado ({doc.page_count} págs)")
                     else:
-                        st.error("No se pudieron detectar valores legibles en la imagen.")
+                        st.error("Error al leer documento.")
+                else:
+                    st.error("Formato no soportado.")
 
-    # Filtro de Capítulos
+    # Filtro de Capítulos (En Sidebar para no estorbar)
     selected_range = None
     if st.session_state.doc and st.session_state.chapter_index:
-        st.markdown("### 🎯 Filtro de Búsqueda")
+        st.markdown("---")
         chapter_names = ["Todo el Libro"] + list(st.session_state.chapter_index.keys())
-        selected_chapter = st.selectbox("Limitar búsqueda a:", chapter_names)
+        selected_chapter = st.selectbox("Filtro de Capítulo:", chapter_names)
         
         if selected_chapter != "Todo el Libro":
             selected_range = get_chapter_range(selected_chapter, st.session_state.chapter_index, st.session_state.doc.page_count)
-            if selected_range:
-                st.caption(f"Rango: Pág {selected_range[0]+1} - {selected_range[1]}")
 
-    # --- FASE 4: Botón de Hard Reset ---
     st.markdown("---")
-    if st.button("🗑️ Limpiar Todo"):
-        # 1. Guardar la siguiente clave para forzar un uploader nuevo
+    if st.button("🗑️ Reset App", use_container_width=True):
         new_key = st.session_state.uploader_key + 1
-        
-        # 2. Borrar ABSOLUTAMENTE TODO de la memoria
         st.session_state.clear()
-        
-        # 3. Restaurar solo la clave necesaria para el reinicio limpio
         st.session_state.uploader_key = new_key
-        
-        # 4. Reiniciar la app
         st.rerun()
 
-# --- MAIN LAYOUT: Asimétrico 1:2 ---
-st.markdown("## ⚡ Dashboard de Auditoría")
+# --- MAIN AREA: Dashboard Responsivo ---
+st.markdown("## ⚡ Circuit Verifier")
 
-col_left, col_right = st.columns([1, 2])
-
-# --- COLUMNA IZQUIERDA: Inputs y Control ---
-with col_left:
-    st.markdown("### 🛠️ Parámetros")
+if st.session_state.doc is None:
+    st.info("👈 Abre el menú lateral (arriba izquierda) para cargar tu libro primero.")
+else:
+    # --- ZONA DE BÚSQUEDA (Top Main) ---
+    # Usamos Tabs para cambiar rápido entre Texto e Imagen sin ir a la sidebar
+    tab_text, tab_img = st.tabs(["🔍 Búsqueda Texto", "📸 Búsqueda Imagen"])
     
-    if st.session_state.doc is None:
-        st.info("👈 Carga un PDF para activar los controles.")
-    else:
-        with st.form("search_form"):
-            query = st.text_input("Valores Clave", placeholder="Ej: 10k, 12V, 0.5A")
-            st.caption("Separa los valores por comas.")
-            
-            search_submitted = st.form_submit_button("🔍 LOCALIZAR EJERCICIO")
-            
+    with tab_text:
+        with st.form("search_form_main"):
+            col_in, col_btn = st.columns([3, 1])
+            with col_in:
+                query = st.text_input("Valores Clave", placeholder="Ej: 10k, 12V", label_visibility="collapsed")
+            with col_btn:
+                search_submitted = st.form_submit_button("Buscar", use_container_width=True)
+                
         if search_submitted and query:
             keywords = [k.strip() for k in query.split(',') if k.strip()]
             if keywords:
-                with st.spinner("Triangulando ejercicio..."):
-                    # Ejecutar búsqueda con o sin rango
+                with st.spinner("Buscando..."):
                     results = search_engine.search_by_unique_values(
-                        st.session_state.doc, 
-                        keywords, 
-                        page_range=selected_range
+                        st.session_state.doc, keywords, page_range=selected_range
                     )
                     st.session_state.search_results = results
-                    
-                    if not results:
-                        st.warning("No se encontraron coincidencias.")
-                    else:
-                        # Auto-seleccionar el mejor resultado
+                    if results:
                         st.session_state.current_page = results[0][0]
+                    else:
+                        st.warning("Sin resultados.")
 
-# --- COLUMNA DERECHA: Display y Resultados ---
-with col_right:
-    if st.session_state.doc:
-        # 1. Visor de Resultados (Lista Horizontal Rápida)
-        if st.session_state.search_results:
-            st.markdown(f"### 🎯 Resultados ({len(st.session_state.search_results)})")
+    with tab_img:
+        search_img = st.file_uploader("Subir Foto Ejercicio", type=["png", "jpg", "jpeg"], key="main_img_search")
+        if search_img:
+            # Blur Check
+            img_bytes = search_img.getvalue()
+            is_blurry, blur_score = image_shield.detect_blur(img_bytes)
             
-            # Scroll horizontal de botones para resultados
-            res_cols = st.columns(min(5, len(st.session_state.search_results)))
-            for i, (p_num, score) in enumerate(st.session_state.search_results[:5]):
-                with res_cols[i]:
-                    label = f"Pág {p_num+1}"
-                    if st.button(f"{label}\n{int(score)}%", key=f"btn_res_{i}"):
-                        st.session_state.current_page = p_num
-
-        st.markdown("---")
-
-        # 2. La Fuente de la Verdad (Tarjeta de Verdad)
-        st.markdown('<div class="stCard">', unsafe_allow_html=True) # <--- INICIO TARJETA
-        st.markdown(f"### ✅ Ejercicio en Página {st.session_state.current_page + 1}")
-        
-        # Renderizado y Extracción
-        txt, img_bytes = backend.extract_page_data(st.session_state.doc, st.session_state.current_page)
-        
-        # Componente 1: Tabla de Verificación Automática
-        detected_components = search_engine.extract_circuit_components(txt)
-        if detected_components:
-            with st.expander("📋 Verificación de Componentes (Detectados)", expanded=True):
-                # Crear DataFrame simple para visualización limpia
-                df_comps = pd.DataFrame(detected_components, columns=["Valor Detectado"])
-                st.dataframe(df_comps, use_container_width=True, hide_index=True)
-        else:
-            st.info("No se detectaron componentes eléctricos estándar en el texto.")
-
-        # Componente 2: Evidencia Visual
-        if img_bytes:
-            st.image(img_bytes, caption="Fuente de la Verdad: Resultado Oficial", use_column_width=True)
-        else:
-            st.error("Error de renderizado.")
+            if is_blurry:
+                st.warning(f"⚠️ Imagen borrosa (Score: {int(blur_score)}).")
             
-        # Navegación manual local
-        st.markdown("---")
+            if st.button("🔍 Escanear Foto", use_container_width=True):
+                with st.spinner("Procesando visión..."):
+                    clean_bytes = image_shield.clean_image(img_bytes)
+                    raw_sig = ai_chat.extract_problem_signature(clean_bytes)
+                    signature = image_shield.sanitize_ocr(raw_sig)
+                
+                if signature:
+                    st.success(f"Detectado: {signature}")
+                    results = search_engine.search_by_unique_values(st.session_state.doc, signature)
+                    st.session_state.search_results = results
+                    if results:
+                        st.session_state.current_page = results[0][0]
+                        st.rerun()
+                    else:
+                        st.error("No encontrado en el libro.")
+                else:
+                    st.error("No se detectaron valores.")
+
+    # --- ZONA DE RESULTADOS ---
+    if st.session_state.search_results:
+        st.markdown(f"### 🎯 Resultados ({len(st.session_state.search_results)})")
+        # Scroll horizontal de botones
+        res_cols = st.columns(min(5, len(st.session_state.search_results)))
+        for i, (p_num, score) in enumerate(st.session_state.search_results[:5]):
+            with res_cols[i]:
+                if st.button(f"Pág {p_num+1}\n{int(score)}%", key=f"btn_res_{i}", use_container_width=True):
+                    st.session_state.current_page = p_num
+
+    st.markdown("---")
+
+    # --- TARJETA PRINCIPAL: FUENTE DE LA VERDAD ---
+    st.markdown('<div class="stCard">', unsafe_allow_html=True)
+    
+    # Header con Navegación Compacta
+    col_head, col_nav = st.columns([2, 1])
+    with col_head:
+        st.markdown(f"### ✅ Pág {st.session_state.current_page + 1}")
+    with col_nav:
         c_prev, c_next = st.columns(2)
         with c_prev:
-            if st.button("⬅️ Anterior"):
+            if st.button("⬅️", use_container_width=True):
                 if st.session_state.current_page > 0:
                     st.session_state.current_page -= 1
                     st.rerun()
         with c_next:
-            if st.button("Siguiente ➡️"):
+            if st.button("➡️", use_container_width=True):
                 if st.session_state.current_page < st.session_state.doc.page_count - 1:
                     st.session_state.current_page += 1
                     st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True) # <--- FIN TARJETA
 
-        # --- SECCIÓN: AUDITORÍA CON IA ---
-        if ai_ready:
-            st.markdown("---")
-            with st.expander("💬 Auditoría con IA (Gemini 1.5 Flash)", expanded=False):
-                # Inicializar chat si no existe o si cambió la página
-                if "chat_session" not in st.session_state or st.session_state.get("last_page_context") != st.session_state.current_page:
-                    with st.spinner("Conectando con el Auditor..."):
-                        st.session_state.chat_session = ai_chat.start_auditor_session(
-                            txt, 
-                            img_bytes,
-                            st.session_state.chapter_index # Inyectamos el índice global
-                        )
-                        st.session_state.last_page_context = st.session_state.current_page
-                        st.session_state.messages = []
+    # Renderizado
+    txt, img_bytes = backend.extract_page_data(st.session_state.doc, st.session_state.current_page)
+    
+    # Expander para la imagen (Ahorra espacio en móvil)
+    with st.expander("📸 Ver Página Original", expanded=True):
+        if img_bytes:
+            st.image(img_bytes, use_column_width=True)
+        else:
+            st.error("Error visual.")
 
-                # Mostrar historial con botones de acción interactivos
-                for i, msg in enumerate(st.session_state.messages):
-                    st.chat_message(msg["role"]).write(msg["content"])
-                    
-                    # Detectar tag de navegación en mensajes del asistente
-                    if msg["role"] == "assistant":
-                        match = re.search(r"\[\[IR_A_PAGINA:\s*(\d+)\]\]", msg["content"])
-                        if match:
-                            target_page = int(match.group(1))
-                            # Key única para que cada botón funcione independientemente
-                            btn_key = f"nav_btn_{i}_{target_page}"
-                            if st.button(f"🚀 Saltar a Pág {target_page}", key=btn_key):
-                                st.session_state.current_page = target_page - 1 # Ajuste 0-indexed
-                                st.rerun()
+    # Verificación de Componentes
+    detected_components = search_engine.extract_circuit_components(txt)
+    if detected_components:
+        with st.expander("📋 Componentes Detectados", expanded=False):
+            df_comps = pd.DataFrame(detected_components, columns=["Valor"])
+            st.dataframe(df_comps, use_container_width=True, hide_index=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
 
-                # Input del Usuario
-                user_input = st.chat_input("Pregunta al auditor o valida tu resultado...")
-                
-                # Widget de carga de contexto adicional
-                uploaded_proof = st.file_uploader(
-                    "📎 Adjuntar ejercicio o documento (PDF, Word, Excel, Imagen)", 
-                    type=["png", "jpg", "jpeg", "pdf", "docx", "xlsx"], 
-                    key="chat_doc_upload"
+    # --- CHAT CON IA ---
+    if ai_ready:
+        st.markdown("---")
+        with st.expander("💬 Chat Auditoría (Gemini)", expanded=True):
+            # Inicializar chat
+            if "chat_session" not in st.session_state or st.session_state.get("last_page_context") != st.session_state.current_page:
+                st.session_state.chat_session = ai_chat.start_auditor_session(
+                    txt, img_bytes, st.session_state.chapter_index
                 )
+                st.session_state.last_page_context = st.session_state.current_page
+                st.session_state.messages = []
+
+            # Historial
+            for i, msg in enumerate(st.session_state.messages):
+                st.chat_message(msg["role"]).write(msg["content"])
+                if msg["role"] == "assistant":
+                    match = re.search(r"\[\[IR_A_PAGINA:\s*(\d+)\]\]", msg["content"])
+                    if match:
+                        target_page = int(match.group(1))
+                        if st.button(f"🚀 Ir a Pág {target_page}", key=f"nav_{i}", use_container_width=True):
+                            st.session_state.current_page = target_page - 1
+                            st.rerun()
+
+            # Input
+            user_input = st.chat_input("Pregunta al auditor...")
+            if user_input:
+                st.session_state.messages.append({"role": "user", "content": user_input})
+                with st.chat_message("user"):
+                    st.write(user_input)
                 
-                if user_input:
-                    # Mostrar mensaje usuario inmediatamente
-                    msg_data = {"role": "user", "content": user_input}
-                    
-                    # Procesar archivo adjunto si existe
-                    processed_images = []
-                    if uploaded_proof:
-                        with st.spinner("Procesando documento adjunto..."):
-                            # 1. Guardar temporalmente
-                            suffix = "." + uploaded_proof.name.split('.')[-1]
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
-                                tmp_path = tmp_file.name
-                            
-                            # Escribir contenido
-                            with open(tmp_path, "wb") as f:
-                                f.write(uploaded_proof.getvalue())
-
-                            # 2. Convertir a PDF si no es imagen directa
-                            final_pdf_path = None
-                            if suffix.lower() in ['.png', '.jpg', '.jpeg']:
-                                processed_images.append(uploaded_proof.getvalue())
-                                msg_data["image"] = uploaded_proof.getvalue() # Mostrar en chat local
-                            else:
-                                # Convertir Docs/Excel/PDF a PDF estandarizado
-                                final_pdf_path = tmp_path
-                                if suffix.lower() not in ['.pdf']:
-                                    final_pdf_path = converter.convert_to_pdf(tmp_path, suffix)
-                                
-                                # 3. Renderizar primera página del PDF a imagen para la IA
-                                if final_pdf_path:
-                                    doc_temp = backend.load_pdf(final_pdf_path)
-                                    if doc_temp:
-                                        _, page_img = backend.extract_page_data(doc_temp, 0)
-                                        if page_img:
-                                            processed_images.append(page_img)
-                                            msg_data["image"] = page_img # Mostrar render en chat local
-                            
-                    st.session_state.messages.append(msg_data)
-                    
-                    with st.chat_message("user"):
-                        st.write(user_input)
-                        if "image" in msg_data:
-                            st.image(msg_data["image"], width=200, caption="Documento Adjunto")
-
-                    # Enviar a Gemini
-                    with st.spinner("El auditor está analizando tu documento..."):
-                        response_text = ai_chat.send_message(
-                            st.session_state.chat_session, 
-                            user_input, 
-                            processed_images
-                        )
-                        
-                        # Guardar y mostrar respuesta
-                        st.session_state.messages.append({"role": "assistant", "content": response_text})
-                        st.rerun()
-    else:
-        # Placeholder visual cuando no hay doc
-        st.markdown("""
-        <div style='text-align: center; padding: 50px; color: #555;'>
-            <h3>Esperando Documento...</h3>
-            <p>El visualizador se activará automáticamente.</p>
-        </div>
-        """, unsafe_allow_html=True)
+                with st.spinner("Pensando..."):
+                    response = ai_chat.send_message(st.session_state.chat_session, user_input)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                    st.rerun()
