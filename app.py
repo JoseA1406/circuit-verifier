@@ -52,110 +52,123 @@ def convert_file_cached(file_path, suffix):
 # --- Inicializar IA ---
 ai_ready = ai_chat.initialize_ai()
 
-# --- Estilos CSS Personalizados (Microsoft Copilot Theme) ---
+# --- Estilos CSS Personalizados (Vivid Light Theme) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
-    /* 1. Global Reset & Font (Segoe UI - Microsoft Standard) */
+    /* 1. Global Reset & Font */
     html, body, [class*="css"] {
-        font-family: 'Segoe UI', 'Inter', sans-serif;
+        font-family: 'Inter', sans-serif;
+        color: #111111;
     }
 
-    /* 2. App Background (Copilot Dark Charcoal) */
+    /* 2. App Background (Pure White) */
     .stApp {
-        background-color: #181818;
-        color: #FFFFFF;
+        background-color: #FFFFFF;
+        color: #111111;
     }
 
-    /* 3. Sidebar Styling */
+    /* 3. Sidebar Styling (Soft Grey) */
     section[data-testid="stSidebar"] {
-        background-color: #202020;
-        border-right: 1px solid #333;
+        background-color: #F8FAFC; /* Slate 50 */
+        border-right: 1px solid #E2E8F0;
     }
 
-    /* 4. SIDEBAR TRIGGER FIX (El Botón Permanente) */
+    /* 4. SIDEBAR TRIGGER FIX (Vivid Blue Circle) */
     [data-testid="stSidebarCollapsedControl"] {
-        background-color: #2b2b2b !important;
+        background-color: #FFFFFF !important;
         border-radius: 50% !important;
-        border: 1px solid #555 !important;
-        color: #FFFFFF !important;
-        padding: 0.3rem !important;
+        border: 2px solid #0066FF !important; /* Vivid Blue Border */
+        color: #0066FF !important;
+        padding: 0.4rem !important;
         margin-top: 0.5rem !important;
         margin-left: 0.5rem !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        z-index: 999999 !important; /* Siempre visible */
+        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25) !important; /* Blue Glow */
+        z-index: 999999 !important;
         transition: all 0.2s ease;
     }
     [data-testid="stSidebarCollapsedControl"]:hover {
-        background-color: #687ace !important; /* Copilot Blue Hover */
-        border-color: #687ace !important;
-        transform: scale(1.1);
-    }
-
-    /* 5. Headers */
-    h1, h2, h3, .stHeader {
+        background-color: #0066FF !important;
         color: #FFFFFF !important;
-        font-weight: 600 !important;
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 102, 255, 0.4) !important;
     }
 
-    /* 6. Custom Card (Copilot Panel) */
+    /* 5. Headers (High Contrast) */
+    h1, h2, h3, .stHeader {
+        color: #111111 !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.5px;
+    }
+    h1 {
+        background: linear-gradient(90deg, #0066FF, #00CCFF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* 6. Custom Card (Paper Style) */
     .stCard {
-        background-color: #2b2b2b;
+        background-color: #FFFFFF;
         border-radius: 16px;
-        border: 1px solid #3e3e3e;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        border: 1px solid #E5E7EB;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
         padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
 
-    /* 7. Buttons (Copilot Accent Blue) */
+    /* 7. Buttons (Vivid Blue Primary) */
     .stButton > button {
-        background-color: #687ace; /* Slate Blue */
+        background-color: #0066FF;
         color: white;
         border: none;
-        border-radius: 24px; /* Píldora completa */
+        border-radius: 12px;
         font-weight: 600;
         padding: 0.6rem 1.2rem;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         min-height: 45px;
+        box-shadow: 0 4px 6px rgba(0, 102, 255, 0.2);
     }
     .stButton > button:hover {
-        background-color: #5665b0;
-        box-shadow: 0 4px 15px rgba(104, 122, 206, 0.4);
+        background-color: #0052CC;
+        box-shadow: 0 6px 12px rgba(0, 102, 255, 0.3);
         transform: translateY(-1px);
+        color: white;
     }
 
-    /* 8. Inputs (Floating Pill) */
+    /* 8. Inputs (Soft Grey Pill) */
     .stTextInput > div > div > input {
-        background-color: #333333;
+        background-color: #F3F4F6;
         border-radius: 24px;
-        border: 1px solid #555;
-        color: white;
+        border: 2px solid transparent;
+        color: #111111;
         padding: 10px 20px;
+        font-weight: 500;
     }
     .stTextInput > div > div > input:focus {
-        border-color: #687ace;
-        box-shadow: 0 0 0 2px rgba(104, 122, 206, 0.3);
+        background-color: #FFFFFF;
+        border-color: #0066FF;
+        box-shadow: 0 0 0 4px rgba(0, 102, 255, 0.1);
     }
 
-    /* 9. Tabs (Minimalist) */
+    /* 9. Tabs (Clean & Active) */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: transparent;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 40px;
-        background-color: transparent;
-        border-radius: 20px;
-        border: 1px solid transparent;
-        color: #aaa;
+        height: 45px;
+        background-color: #F3F4F6;
+        border-radius: 12px;
+        border: none;
+        color: #64748B;
         padding: 0 20px;
+        font-weight: 600;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #333;
-        color: #687ace;
-        border: 1px solid #444;
+        background-color: #0066FF;
+        color: white;
+        box-shadow: 0 4px 6px rgba(0, 102, 255, 0.2);
     }
 
     /* 10. Hide Native Junk */
@@ -166,8 +179,9 @@ st.markdown("""
     /* Mobile Tweaks */
     @media only screen and (max-width: 768px) {
         .block-container {
-            padding-top: 3rem !important; /* Espacio para el botón flotante */
+            padding-top: 4rem !important; /* Más espacio para el botón flotante */
         }
+        h1 { font-size: 2rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
