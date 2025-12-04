@@ -52,7 +52,7 @@ def convert_file_cached(file_path, suffix):
 # --- Inicializar IA ---
 ai_ready = ai_chat.initialize_ai()
 
-# --- Estilos CSS Personalizados (Vivid Light Theme) ---
+# --- Estilos CSS Personalizados (Vivid Light Theme - FAB Fix) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
@@ -60,60 +60,74 @@ st.markdown("""
     /* 1. Global Reset & Font */
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
-        color: #111111;
+        color: #000000;
     }
 
     /* 2. App Background (Pure White) */
     .stApp {
         background-color: #FFFFFF;
-        color: #111111;
+        color: #000000;
     }
 
     /* 3. Sidebar Styling (Soft Grey) */
     section[data-testid="stSidebar"] {
-        background-color: #F8FAFC; /* Slate 50 */
-        border-right: 1px solid #E2E8F0;
+        background-color: #F8F9FA;
+        border-right: 1px solid #E5E7EB;
     }
 
-    /* 4. SIDEBAR TRIGGER FIX (Vivid Blue Circle) */
+    /* 4. SIDEBAR TRIGGER FIX (Floating Action Button - FAB) */
     [data-testid="stSidebarCollapsedControl"] {
-        background-color: #FFFFFF !important;
-        border-radius: 50% !important;
-        border: 2px solid #0066FF !important; /* Vivid Blue Border */
-        color: #0066FF !important;
-        padding: 0.4rem !important;
-        margin-top: 0.5rem !important;
-        margin-left: 0.5rem !important;
-        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25) !important; /* Blue Glow */
-        z-index: 999999 !important;
-        transition: all 0.2s ease;
-    }
-    [data-testid="stSidebarCollapsedControl"]:hover {
+        display: block !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 20px !important;
+        left: 20px !important;
+        z-index: 1000005 !important;
         background-color: #0066FF !important;
         color: #FFFFFF !important;
-        transform: scale(1.1);
-        box-shadow: 0 6px 16px rgba(0, 102, 255, 0.4) !important;
+        border-radius: 50% !important;
+        border: none !important;
+        width: 48px !important;
+        height: 48px !important;
+        box-shadow: 0px 4px 12px rgba(0, 102, 255, 0.5) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        background-color: #0052CC !important;
+        transform: scale(1.1) !important;
+        box-shadow: 0px 6px 16px rgba(0, 102, 255, 0.6) !important;
+    }
+    
+    /* Asegurar que el icono dentro del botón sea blanco */
+    [data-testid="stSidebarCollapsedControl"] svg {
+        fill: #FFFFFF !important;
+        stroke: #FFFFFF !important;
+        width: 24px !important;
+        height: 24px !important;
     }
 
     /* 5. Headers (High Contrast) */
     h1, h2, h3, .stHeader {
-        color: #111111 !important;
+        color: #000000 !important;
         font-weight: 700 !important;
         letter-spacing: -0.5px;
     }
     h1 {
-        background: linear-gradient(90deg, #0066FF, #00CCFF);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #0066FF !important; /* Azul eléctrico para el título principal */
     }
 
-    /* 6. Custom Card (Paper Style) */
+    /* 6. Custom Card (Copilot Light Style) */
     .stCard {
         background-color: #FFFFFF;
         border-radius: 16px;
         border: 1px solid #E5E7EB;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        padding: 20px;
         margin-bottom: 1.5rem;
     }
 
@@ -140,8 +154,8 @@ st.markdown("""
     .stTextInput > div > div > input {
         background-color: #F3F4F6;
         border-radius: 24px;
-        border: 2px solid transparent;
-        color: #111111;
+        border: 1px solid transparent;
+        color: #000000;
         padding: 10px 20px;
         font-weight: 500;
     }
@@ -179,7 +193,7 @@ st.markdown("""
     /* Mobile Tweaks */
     @media only screen and (max-width: 768px) {
         .block-container {
-            padding-top: 4rem !important; /* Más espacio para el botón flotante */
+            padding-top: 5rem !important; /* Espacio extra para el FAB */
         }
         h1 { font-size: 2rem !important; }
     }
